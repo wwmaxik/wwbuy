@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Панель управления ботом – Аукцион</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .collapsible-content {
+      display: none;
+      padding: 10px;
+      border-top: 1px solid #ebedef;
+    }
+
+    .collapsible-content.active {
+      display: block;
+    }
+
+    .collapsible-header {
+      cursor: pointer;
+      padding: 10px;
+      border-bottom: 1px solid #ebedef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .collapsible-header svg {
+      transition: transform 0.3s ease;
+    }
+
+    .collapsible-header:hover {
+      background-color: #f8fafc;
+    }
+
+    .inventory-slot {
+      position: relative;
+      transition: all 0.2s ease;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      width: 64px;
+      height: 64px;
+      flex-shrink: 0;
+    }
+
+    /* Стили для скроллбара (опционально) */
+    .scrollbar-thin::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background-color: #d1d5db; /* Цвет ползунка */
+      border-radius: 3px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background-color: #f3f4f6; /* Цвет трека */
+    }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 64px);
+      gap: 4px;
+      justify-content: center;
+    }
+    
+    .inventory-slot:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .inventory-item {
+      border: 2px solid #6c757d;
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    }
+    
+    .inventory-empty {
+      border: 2px dashed #ced4da;
+      background: #f8f9fa;
+    }
+    
+    .inventory-slot img {
+      image-rendering: pixelated;
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+    }
+    
+    .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px; /* Увеличенные отступы */
+      font-size: 1rem; /* Увеличенный размер шрифта */
+      border-radius: 6px; /* Более округлые углы */
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s;
+      max-width: 250px; /* Ограничение ширины */
+      word-wrap: break-word; /* Разбиение слов на строки, если они слишком длинные */
+    }
+    
+    .group:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    /* Стиль для количества */
+    .item-count {
+      position: absolute;
+      right: 2px;
+      bottom: 2px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-size: 0.75rem;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    .inventory-slot .enchant-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(128, 0, 128, 0.4); /* Полупрозрачный фиолетовый цвет */
+      border-radius: 4px; /* Округление углов */
+      display: none; /* Скрыть по умолчанию */
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .inventory-slot.enchanted .enchant-overlay {
+      display: flex; /* Показываем наложение, если зачаровано */
+    }
+
+    .inventory-item.suitable {
+      border: 2px solid #28a745; /* зелёная рамка */
+      background-color: #e6ffed; /* светло-зелёный фон */
+    }
+
+    /* В раздел стилей добавьте: */
+    .stats-section {
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    /* Стили для таблицы */
+    #teamsList {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px; /* Отступ между колонками */
+    }
+
+    #teamsList > div {
+      display: flex;
+      flex-direction: column;
+      gap: 4px; /* Отступ между игроками внутри колонки */
+    }
+
+    /* Стили для каждого игрока */
+    #teamsList .player {
+      background-color: #f9f9f9;
+      padding: 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans p-4">
+  <div class="max-w-6xl mx-auto space-y-6">
+    <h1 class="text-3xl font-bold text-center text-gray-800">WWBuy (by wwmaxik)</h1>
+
+    <!-- Секция настроек подключения -->
+    <div class="space-y-4 bg-white p-4 rounded-lg border border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-700 text-center">
+        <button class="flex justify-between w-full" onclick="toggleVisibility('botSettings')">
+          Настройки подключения бота
+          <span id="botSettingsToggle" class="ml-2">+</span>
+        </button>
+      </h2>
+      <div id="botSettings" class="collapsible-content">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Логин</label>
+            <input type="text" id="botUsername" class="w-full px-3 py-2 border rounded" placeholder="zxc_autobuy" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Пароль ( /login [пароль] )</label>
+            <input type="password" id="botPassword" class="w-full px-3 py-2 border rounded" placeholder="Необязательно">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">IP сервера</label>
+            <input type="text" id="botHost" class="w-full px-3 py-2 border rounded" placeholder="spookytime.net" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Порт</label>
+            <input type="number" id="botPort" class="w-full px-3 py-2 border rounded" value="25565" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Версия</label>
+            <input type="text" id="botVersion" class="w-full px-3 py-2 border rounded" value="1.16.5" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Номер анархии</label>
+            <input type="text" id="botAnarchy" class="w-full px-3 py-2 border rounded" value="503" required>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Кнопка запуска бота -->
+    <div class="text-center">
+      <button id="startBotBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+        Запустить бота
+      </button>
+    </div>
+
+    <div class="stats-section bg-white p-4 rounded-lg border border-gray-200">
+      <h2 class="text-xl font-semibold mb-4 text-center">Статистика бота</h2>
+      <div class="grid grid-cols-4 gap-4 text-center">
+        <div>
+          <div class="text-sm text-gray-500">HP</div>
+          <div class="text-2xl font-bold text-red-600" id="healthStat">20</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Еда</div>
+          <div class="text-2xl font-bold text-yellow-600" id="foodStat">20</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Опыт</div>
+          <div class="text-2xl font-bold text-green-600" id="xpStat">0</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Насыщение</div>
+          <div class="text-2xl font-bold text-blue-600" id="saturationStat">5.0</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Секция команд -->
+    <div class="space-y-4 bg-white p-4 rounded-lg border border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-700 text-center">
+        <button class="flex justify-between w-full" onclick="toggleVisibility('teamsSection')">
+          Игроки
+          <span id="teamsSectionToggle" class="ml-2">+</span>
+        </button>
+      </h2>
+      <div id="teamsSection" class="collapsible-content">
+        <div id="teamsList" class="grid grid-cols-3 gap-2">
+          <!-- Сюда будет вставляться список игроков -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Управление автоскупкой -->
+    <div class="space-y-4">
+      <h2 class="text-2xl font-semibold text-gray-700 text-center">
+        <button class="flex justify-between w-full" onclick="toggleVisibility('purchaseList')">
+          Настройка автобая
+          <span id="purchaseListToggle" class="ml-2">+</span>
+        </button>
+      </h2>
+      <div id="purchaseList" class="collapsible-content">
+        <div id="purchaseListContainer" class="space-y-4"></div>
+        <div class="text-center space-x-2">
+          <button onclick="addNewItem()" class="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+            + Добавить предмет
+          </button>
+          <button id="updatePurchaseListBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+            Сохранить изменения
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Аукцион и чат -->
+    <div class="flex flex-col md:flex-row gap-4 h-[600px] min-h-[780px] w-full max-w-[1200px] mx-auto">
+      <!-- Секция аукциона -->
+      <div class="flex-1 bg-white border rounded-xl p-4 overflow-hidden flex flex-col min-w-[750px]">
+        <h2 class="text-xl font-semibold mb-4 text-center">Инвентарь бота</h2>
+        <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-1">
+          <div class="grid grid-cols-[repeat(9,64px)] gap-1 justify-center w-max mx-auto" id="inventoryGrid"></div>
+        </div>
+      </div>
+
+      <!-- Секция чата -->
+      <div class="flex-1 bg-white border rounded-xl p-4 flex flex-col min-w-[400px]">
+        <h2 class="text-xl font-semibold mb-4 text-center">Чат</h2>
+        <div id="chat" class="flex-1 overflow-y-auto space-y-2 p-2"></div>
+        <div class="mt-4 flex gap-2">
+          <input type="text" id="chatInput" placeholder="Введите сообщение..." 
+                class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <button id="sendMessageButton" 
+                  class="bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-lg transition-colors">
+            Отправить
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Шаблон для добавления предмета -->
+  <template id="itemTemplate">
+    <div class="item-card bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div class="flex gap-2 mb-4">
+        <div class="flex-1">
+          <label class="block text-sm font-medium mb-1">ID предмета</label>
+          <input type="text" class="item-id w-full px-3 py-2 border rounded" placeholder="diamond">
+        </div>
+        <div class="flex-1">
+          <label class="block text-sm font-medium mb-1">Макс. цена за 1 шт.</label>
+          <input type="number" class="item-price w-full px-3 py-2 border rounded" placeholder="7500">
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">Кастомное название</label>
+        <input type="text" class="item-custom-name w-full px-3 py-2 border rounded" placeholder="123 Талисман Крушителя 123">
+      </div>
+
+      <div class="enchant-section mb-4">
+        <div class="flex items-center gap-2 mb-2">
+          <h3 class="text-sm font-medium">Зачарования</h3>
+          <button onclick="addEnchantment(this)" class="text-xs bg-gray-100 px-2 py-1 rounded">+ Добавить</button>
+        </div>
+        <div class="enchant-list flex flex-wrap gap-2"></div>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="removeItem(this)" class="text-red-500 hover:text-red-600 text-sm">Удалить</button>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    let purchaseItems = [];
+
+    // Добавление нового предмета в список покупок
+    function addNewItem(item = {name: '', minPricePerUnit: 0, customName: '', enchants: {}}) {
+      const template = document.getElementById('itemTemplate');
+      const clone = template.content.cloneNode(true);
+      
+      const card = clone.querySelector('.item-card');
+      card.querySelector('.item-id').value = item.name || '';
+      card.querySelector('.item-price').value = item.minPricePerUnit || '';
+      card.querySelector('.item-custom-name').value = item.customName || '';
+      
+      const enchantList = card.querySelector('.enchant-list');
+      Object.entries(item.enchants || {}).forEach(([id, level]) => {
+        enchantList.appendChild(createEnchantBadge(id, level));
+      });
+
+      document.getElementById('purchaseListContainer').appendChild(clone);
+    }
+
+    // Создание бейджа для зачарования
+    function createEnchantBadge(id, level) {
+      const div = document.createElement('div');
+      div.className = 'enchant-badge bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center gap-1';
+      div.innerHTML = 
+        `${id} ${level}
+        <button onclick="this.parentElement.remove()" class="text-blue-600 hover:text-blue-700">×</button>`;
+      div.dataset.id = id;
+      div.dataset.level = level;
+      return div;
+    }
+
+    // Добавление зачарования
+    function addEnchantment(button) {
+      const card = button.closest('.enchant-section');
+      const id = prompt('ID зачарования (например: sharpness)');
+      if (!id) return;
+
+      const level = prompt('Минимальный уровень');
+      if (!level || isNaN(level)) {
+        alert('Уровень должен быть числом!');
+        return;
+      }
+
+      card.querySelector('.enchant-list').appendChild(createEnchantBadge(id, level));
+    }
+
+    // Удаление предмета
+    function removeItem(button) {
+      button.closest('.item-card').remove();
+    }
+
+    // Обновление списка покупок
+    document.getElementById('updatePurchaseListBtn').addEventListener('click', () => {
+      const items = Array.from(document.querySelectorAll('.item-card')).map(card => {
+        const enchants = Array.from(card.querySelectorAll('.enchant-badge')).reduce((acc, badge) => {
+          const id = badge.dataset.id;
+          const level = Number(badge.dataset.level);
+          if (id && !isNaN(level)) {
+            acc[id] = level;
+          }
+          return acc;
+        }, {});
+
+        return {
+          name: card.querySelector('.item-id').value.trim(),
+          minPricePerUnit: Number(card.querySelector('.item-price').value),
+          customName: card.querySelector('.item-custom-name').value.trim() || undefined,
+          enchants: enchants
+        };
+      });
+
+      fetch('/updatePurchaseList', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purchaseList: items })
+      })
+      .then(() => alert('Настройки сохранены!'))
+      .catch(err => alert('Ошибка: ' + err));
+    });
+
+    // Инициализация WebSocket
+    const socket = io();
+    const INVENTORY_SIZE = 90;
+
+    // Отрисовка инвентаря аукциона
+    function renderInventory(auctionItems) {
+      const grid = document.getElementById('inventoryGrid');
+      let html = '';
+      
+      for (let i = 0; i < INVENTORY_SIZE; i++) {
+        const item = auctionItems.find(it => it.slot === i);
+        
+        const slotClass = item ? 'inventory-item' : 'inventory-empty';
+        const enchantedClass = item && Object.keys(item.enchantments).length > 0 ? 'enchanted' : '';
+        
+        // Проверяем, подходит ли товар (пример логики, подстрой под свои нужды)
+        let suitableClass = '';
+        if (item) {
+          // Пробегаемся по purchaseItems, которые ты, например, получаешь из настроек
+          purchaseItems.forEach(purchase => {
+            // Сравниваем id товара и проверяем цену (pricePerUnit)
+            if (purchase.name === item.id && item.pricePerUnit <= purchase.minPricePerUnit) {
+              suitableClass = ' suitable';
+            }
+          });
+        }
+        
+        html += `
+          <div class="relative w-16 h-16 ${slotClass} inventory-slot group ${enchantedClass}${suitableClass}">
+            ${item ? 
+              `<img src="https://120fps.ddns.net/public/icons/${item.id}.png" 
+                    class="w-full h-full" 
+                    onerror="this.src='https://120fps.ddns.net/public/icons/empty.png'">
+              <div class="tooltip">
+                <div>${item.name}</div>
+                <div>Цена: $${item.price}</div>
+                <div>За 1: $${Math.round(item.pricePerUnit)}</div>
+                ${Object.entries(item.enchantments).map(([id, lvl]) => 
+                  `<div class="text-yellow-300">${id} ${lvl}</div>`
+                ).join('')}
+              </div>
+              <div class="item-count">${item.count}</div>
+              <div class="enchant-overlay"></div>`
+            : ''}
+          </div>
+        `;
+      }
+      
+      grid.innerHTML = html;
+    }
+
+    // Добавление начального предмета
+    addNewItem({name: 'diamond', minPricePerUnit: 7500});
+
+    // Функция для проверки и сохранения иконок в localStorage
+    async function saveIconsToLocalStorage(auctionItems) {
+      // Пытаемся загрузить иконки из localStorage
+      const cachedIcons = JSON.parse(localStorage.getItem('auctionIcons') || '[]');
+
+      // Массив иконок, которые нужно загрузить
+      const iconsToDownload = auctionItems
+        .filter(item => !cachedIcons.includes(item.id)) // Иконки, которых нет в localStorage
+        .map(item => item.id);
+
+      // Загружаем недостающие иконки
+      for (const iconId of iconsToDownload) {
+        const image = new Image();
+        image.src = `https://120fps.ddns.net/public/icons/${iconId}.png`;
+        image.onload = () => {
+          // Сохраняем в localStorage после загрузки
+          cachedIcons.push(iconId);
+          localStorage.setItem('auctionIcons', JSON.stringify(cachedIcons));
+        };
+      }
+    }
+
+    // Вызываем эту функцию при загрузке страницы
+    socket.on('auctionData', (data) => {
+      saveIconsToLocalStorage(data);  // Сохраняем иконки
+      renderInventory(data);  // Рендерим инвентарь
+    });
+
+    socket.on('botStats', (stats) => {
+      document.getElementById('healthStat').textContent = stats.health.toFixed(1);
+      document.getElementById('foodStat').textContent = stats.food;
+      document.getElementById('xpStat').textContent = stats.xp;
+      document.getElementById('saturationStat').textContent = stats.saturation.toFixed(1);
+    });
+
+    socket.on('teamsUpdate', (teams) => {
+      const teamsList = document.getElementById('teamsList');
+      teamsList.innerHTML = ''; // Очищаем таблицу перед обновлением
+
+      // Преобразуем объект игроков в массив
+      const players = Object.entries(teams);
+
+      // Разбиваем массив игроков на группы по 4 (или другое количество)
+      const chunkSize = 1; // Количество строк в каждой колонке
+      const columns = [];
+
+      for (let i = 0; i < players.length; i += chunkSize) {
+        columns.push(players.slice(i, i + chunkSize));
+      }
+
+      // Создаем колонки и добавляем игроков
+      columns.forEach((column, columnIndex) => {
+        const columnDiv = document.createElement('div');
+        columnDiv.className = 'space-y-1'; // Отступ между игроками
+
+        column.forEach(([playerID, playerName]) => {
+          const playerDiv = document.createElement('div');
+          playerDiv.className = document.getElementById('botUsername').value.trim() !== playerName 
+            ? 'bg-gray-50 p-2 rounded-lg text-sm text-gray-600' 
+            : 'bg-gray-50 p-2 rounded-lg text-sm text-green-600 font-bold';
+          playerDiv.textContent = (parseInt(playerID) + 1) + ". " + playerName;
+          columnDiv.appendChild(playerDiv);
+        });
+
+        teamsList.appendChild(columnDiv);
+      });
+    });
+    
+    // Обработка сообщений от бота
+    socket.on('botMessage', (msg) => {
+      const chatDiv = document.getElementById('chat');
+      const p = document.createElement('p');
+      p.textContent = msg;
+      p.className = 'text-sm py-1 border-b border-gray-100';
+      chatDiv.appendChild(p);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    });
+
+    // Отправка сообщения по нажатию Enter
+    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('sendMessageButton').click();
+      }
+    });
+
+    // Отправка сообщения
+    document.getElementById('sendMessageButton').addEventListener('click', () => {
+      const message = document.getElementById('chatInput').value.trim();
+      if (message) {
+        socket.emit('sendMessage', message);
+        document.getElementById('chatInput').value = '';
+      }
+    });
+
+    // Запуск бота
+    document.getElementById('startBotBtn').addEventListener('click', () => {
+      const botConfig = {
+        username: document.getElementById('botUsername').value.trim(),
+        password: document.getElementById('botPassword').value.trim(),
+        host: document.getElementById('botHost').value.trim(),
+        port: document.getElementById('botPort').value.trim(),
+        version: document.getElementById('botVersion').value.trim(),
+        anarchy: document.getElementById('botAnarchy').value.trim()
+      };
+
+      if (!botConfig.username || !botConfig.host || !botConfig.port || !botConfig.version || !botConfig.anarchy) {
+        alert('Заполните обязательные поля: Логин, Хост, Порт, Версия, Анархия');
+        return;
+      }
+
+      fetch('/startBot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(botConfig)
+      })
+      .then(response => response.json())
+      .then(data => alert(data.status))
+      .catch(err => alert('Ошибка запуска бота: ' + err));
+    });
+
+    // Функция для сворачивания/разворачивания контента
+    function toggleVisibility(id) {
+      const content = document.getElementById(id);
+      const toggleButton = document.getElementById(id + 'Toggle');
+      
+      content.classList.toggle('active');
+      toggleButton.textContent = content.classList.contains('active') ? '-' : '+';
+    }
+  </script>
+</body>
+</html>
