@@ -274,7 +274,7 @@ function checkAuctionPage(window) {
 app.get('/', async (req, res) => {
   try {
     // Делаем запрос на внешний сервер для получения HTML
-    const response = await axios.get(`https://raw.githubusercontent.com/wwmaxik/wwbuy/refs/heads/main/v${ah_update_delay}/index.html`);
+    const response = await axios.get(`https://raw.githubusercontent.com/wwmaxik/wwbuy/refs/heads/main/v${wwbuy_version}/index.html`);
     
     // Отправляем полученный HTML на клиент
     res.send(response.data);
