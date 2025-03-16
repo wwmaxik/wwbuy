@@ -115,6 +115,15 @@
       text-align: center;
     }
   </style>
+  <script>
+    // Определяем функцию в <head>
+    window.toggleVisibility = (sectionId, toggleIconId) => {
+      const content = document.getElementById(sectionId);
+      const toggleIcon = document.getElementById(toggleIconId);
+      content.classList.toggle('active');
+      toggleIcon.innerHTML = content.classList.contains('active') ? minusIcon : plusIcon;
+    };
+  </script>
 </head>
 <body class="bg-gray-100 font-sans p-4">
   <div class="max-w-6xl mx-auto space-y-6">
@@ -393,13 +402,13 @@
     </svg>`;
 
     // Функция для сворачивания/разворачивания секций с обновлением иконки
-      window.toggleVisibility = (sectionId, toggleIconId) => {
+    /*  window.toggleVisibility = (sectionId, toggleIconId) => {
         const content = document.getElementById(sectionId);
         const toggleIcon = document.getElementById(toggleIconId);
         content.classList.toggle('active');
         // Если секция открыта – показываем иконку минуса, иначе плюс
         toggleIcon.innerHTML = content.classList.contains('active') ? minusIcon : plusIcon;
-      };
+      };*/
 
     // Добавление нового предмета в список покупок
       window.addNewItem = (item = {name: '', minPricePerUnit: 0, customName: '', enchants: {}}) => {
