@@ -228,47 +228,6 @@
           </div>
           <div class="text-2xl font-bold text-blue-600 mt-2" id="saturationStat">0</div>
         </div>
-        <!-- Прибыль -->
-        <div class="p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
-          <div class="text-sm text-gray-600 flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-            </svg>
-            Прибыль
-          </div>
-          <div class="text-2xl font-bold text-red-600 mt-2" id="sessionIncome">0</div>
-        </div>
-        <!-- Баланс -->
-        <div class="p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
-          <div class="text-sm text-gray-600 flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-            </svg>
-            Баланс
-          </div>
-          <div class="text-2xl font-bold text-green-600 mt-2" id="botBalance">0</div>
-        </div>
-        <!-- Время онлайн -->
-        <div class="p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
-          <div class="text-sm text-gray-600 flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-            </svg>
-            Время онлайн
-          </div>
-          <div class="text-2xl font-bold text-purple-600 mt-2" id="uptimeStat">00:00:00</div>
-        </div>
-        <!-- Куплено -->
-        <div class="p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow">
-          <div class="text-sm text-gray-600 flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-              <path fill-rule="evenodd" d="M4 8a6 6 0 1112 0v4a2 2 0 01-2 2H6a2 2 0 01-2-2V8zm6 10a3 3 0 01-3-3h6a3 3 0 01-3 3z" clip-rule="evenodd" />
-            </svg>
-            Куплено
-          </div>
-          <div class="text-2xl font-bold text-indigo-600 mt-2" id="itemsBought">0</div>
-        </div>
       </div>
     </div>
 
@@ -400,15 +359,6 @@
     const minusIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
     </svg>`;
-
-    // Функция для сворачивания/разворачивания секций с обновлением иконки
-    /*  window.toggleVisibility = (sectionId, toggleIconId) => {
-        const content = document.getElementById(sectionId);
-        const toggleIcon = document.getElementById(toggleIconId);
-        content.classList.toggle('active');
-        // Если секция открыта – показываем иконку минуса, иначе плюс
-        toggleIcon.innerHTML = content.classList.contains('active') ? minusIcon : plusIcon;
-      };*/
 
     // Добавление нового предмета в список покупок
       window.addNewItem = (item = {name: '', minPricePerUnit: 0, customName: '', enchants: {}}) => {
