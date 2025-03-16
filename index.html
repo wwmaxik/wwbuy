@@ -392,12 +392,7 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
     </svg>`;
 
-    (() => {
-      const socket = io();
-      const INVENTORY_SIZE = 90;
-      let purchaseItems = [];
-
-      // Функция для сворачивания/разворачивания секций с обновлением иконки
+    // Функция для сворачивания/разворачивания секций с обновлением иконки
       window.toggleVisibility = (sectionId, toggleIconId) => {
         const content = document.getElementById(sectionId);
         const toggleIcon = document.getElementById(toggleIconId);
@@ -406,7 +401,7 @@
         toggleIcon.innerHTML = content.classList.contains('active') ? minusIcon : plusIcon;
       };
 
-      // Добавление нового предмета в список покупок
+    // Добавление нового предмета в список покупок
       window.addNewItem = (item = {name: '', minPricePerUnit: 0, customName: '', enchants: {}}) => {
         const template = document.getElementById('itemTemplate');
         const clone = template.content.cloneNode(true);
@@ -421,18 +416,7 @@
         document.getElementById('purchaseListContainer').appendChild(clone);
       };
 
-      // Создание бейджа для зачарования
-      const createEnchantBadge = (id, level) => {
-        const div = document.createElement('div');
-        div.className = 'enchant-badge bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center gap-1';
-        div.innerHTML = `${id} ${level}
-          <button onclick="this.parentElement.remove()" class="text-blue-600 hover:text-blue-700">×</button>`;
-        div.dataset.id = id;
-        div.dataset.level = level;
-        return div;
-      };
-
-      // Добавление зачарования
+    // Добавление зачарования
       window.addEnchantment = (button) => {
         const card = button.closest('.enchant-section');
         const id = prompt('ID зачарования (например: sharpness)');
@@ -445,7 +429,7 @@
         card.querySelector('.enchant-list').appendChild(createEnchantBadge(id, level));
       };
 
-      // Удаление предмета
+    // Удаление предмета
       window.removeItem = (button) => {
         button.closest('.item-card').remove();
       };
@@ -508,6 +492,22 @@
             alert('Ошибка при загрузке конфига: ' + error.message);
           }
         }
+      };
+
+    (() => {
+      const socket = io();
+      const INVENTORY_SIZE = 90;
+      let purchaseItems = [];
+
+      // Создание бейджа для зачарования
+      const createEnchantBadge = (id, level) => {
+        const div = document.createElement('div');
+        div.className = 'enchant-badge bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center gap-1';
+        div.innerHTML = `${id} ${level}
+          <button onclick="this.parentElement.remove()" class="text-blue-600 hover:text-blue-700">×</button>`;
+        div.dataset.id = id;
+        div.dataset.level = level;
+        return div;
       };
 
       // Загрузка конфигурации
